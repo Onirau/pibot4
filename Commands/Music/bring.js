@@ -20,10 +20,9 @@ module.exports = {
         
         await interaction.reply({content:"Coming!.", ephemeral:true})
 
-        await Queue.connect(interaction.member.voice.channel)
-        Queue.metadata.channel = interaction.member.voice.channel
+        await Client.guilds.resolve(interaction.guildId).members.resolve(Client.user.id).voice.setChannel(interaction.member.voice.channel)
+        // await Queue.connect(interaction.member.voice.channel)
+        // await Client.guilds.resolve(interaction.guildId).me.voice.setChannel(interaction.member.voice.channel)
 
-        Queue.setPaused(false)
-        if (!Queue.playing) await Queue.play();
     }
 }

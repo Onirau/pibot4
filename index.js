@@ -45,7 +45,12 @@ Client.Player = new Player(Client, {
 Client.Commands = new Discord.Collection();
 
 Client.Channels = [
-    new RadioChannel("https://open.spotify.com/playlist/1QMt9qudGl0kUiNuDoJKf9?si=6d3fe83bfbee4d71", "Test", "test", "Rile", QueryType.SPOTIFY_PLAYLIST)
+    new RadioChannel("https://open.spotify.com/playlist/1QMt9qudGl0kUiNuDoJKf9?si=6d3fe83bfbee4d71", "Test", "test", "Rile", QueryType.SPOTIFY_PLAYLIST),
+    new RadioChannel("https://open.spotify.com/playlist/4Ay8TrBgI7WOTCQHcSMzk8?si=ea314d1885f1475b", `"Top Tier"`, "toptier", "Angle", QueryType.SPOTIFY_PLAYLIST),
+    new RadioChannel("https://open.spotify.com/playlist/0oZq1bRG3laddQEpdLzUFY?si=a5f28f068f204546", `"Collection V2"`, "collection2", "Leuk", QueryType.SPOTIFY_PLAYLIST),
+    new RadioChannel("https://open.spotify.com/playlist/0vvXsWCC9xrXsKd4FyS8kM?si=06930acd720444b3", "Study Lofi 📚", "lofi", "Lofi Girl", QueryType.SPOTIFY_PLAYLIST),
+    new RadioChannel("https://open.spotify.com/playlist/2SIsxQoy5cD3Ei29WDPywW?si=e4c71aa3f55d437b", "Old School", "oldschool", "Rile", QueryType.SPOTIFY_PLAYLIST),
+    new RadioChannel("https://open.spotify.com/playlist/0gfVGUS0zaX57oXZtu3oxo?si=9ad1504a96d34619", "acloudyskye", "acloudyskye", "Rile", QueryType.SPOTIFY_PLAYLIST)
 ] // Radio Channels
 
 function getDirectories(distPath) {
@@ -116,7 +121,7 @@ async function GetTracks(radioChannelID){
         
         tracks = results.tracks
 
-        console.log(tracks.length)
+        // console.log(tracks.length)
 
         tracks = shuffle(tracks)         
     }).catch(() => {
@@ -135,8 +140,37 @@ function GetEmbed() {
     return embed
 }
 
+async function tryPlay(q){
+    await console.log("attemp")
+
+
+    await console.log("r we playin?")
+    await console.log(q.playing)
+    if (!q.playing) {
+        await console.log("q forc start")
+        await q.play()
+    }
+
+    return
+}
+
+async function Fix(interaction) {
+    // const Queue = await Client.Player.getQueue(interaction.guildId)
+    // if (!Queue) {
+    //     return
+    // }
+
+    // Queue.setPaused(false)
+    // Queue.play()
+    console.log("fix debug disabled")
+
+    return
+}
+
 Client.GetEmbed = GetEmbed
 Client.GetTracks = GetTracks
+Client.Fix = Fix
+Client.tryPlay = tryPlay
 
 const subFolders = getDirectories('./Commands/')
 for(const subFolder of subFolders){
@@ -184,20 +218,11 @@ Client.on("ready", async () => {
     Queue = await Client.Player.createQueue(Client.Default_Guild, {
         leaveOnEmpty: false,
         leaveOnEnd: false,
-        metadata: {
-            channel: Client.Default_Channel
-        }
-    });
+        leaveOnStop: false,
+        metadata: {}
+    })
 
     Queue.repeatMode = QueueRepeatMode.QUEUE
-
-    // var results = await Client.Player.search("https://open.spotify.com/playlist/1QMt9qudGl0kUiNuDoJKf9?si=6d3fe83bfbee4d71", {
-    //     searchEngine: QueryType.AUTO
-    // })
-
-    // await Queue.addTracks(results.tracks)
-
-    // console.log("Tracks Added...")
 
     var Tracks = await GetTracks("test")
 
@@ -208,40 +233,35 @@ Client.on("ready", async () => {
     await Queue.connect(Client.Default_Channel);
 
     console.log("Connected...")
-
-    if (!Queue.playing) await Queue.play();
-    if(Queue.metadata.channel.members.size > 1){ // More than one to include the bot itself.
-        console.log("Start Playing...")
-        Queue.setPaused(false)
-    }else{
-        Queue.setPaused(true)
-    }
+    await tryPlay(Queue)
 });
 
-Client.Player.on("trackStart", async (Queue, track) => {
-    const Channel = await Client.guilds.resolve(Radio_Report_ChannelID);
+// Client.Player.on("voiceStateUpdate", async (Queue, o, n) => {
+//     if (n.member.user.bot) return;
+//     if (n.member.user == Client.user) return;
 
-    if (Channel){
-        Channel.send({content:"Now Playing NEXT TRACK!"})
+//     if(n.channelId == Queue.connection.channel.id) {
+//         if(Queue.connection.channel.members.size > 1){ // More than one to include the bot itself.
+//             if (Queue.paused) {
+//                 console.log("UNPAUSE - NO LONGER SAVE.")
+//                 Queue.setPaused(false)
+//             }
+//         }
+//     }
+// })
+
+Client.Player.on("trackEnd", async(q, t) => {
+    // console.log("trackEnd!", q)
+    if (q.metadata.report_channel) {
+        q.metadata.report_channel.send({content: "Next Track now playing"})
     }
 })
 
-Client.Player.on("voiceStateUpdate", async (Queue, o, n) => {
-    if (n.member.user.bot) return;
-
-    if (o.channelId && (!n.channelId) && o.channelId == Queue.metadata.channel.id) {
-        if(Queue.metadata.channel.members.size == 1){ // More than one to include the bot itself.
-            console.log("PAUSE FOR SAVING.")
-            Queue.setPaused(true)
-        }
-    }else if((!o.channelId) && n.channelId && n.channelId == Queue.metadata.channel.id) {
-        if(Queue.metadata.channel.members.size > 1){ // More than one to include the bot itself.
-            console.log("UNPAUSE - NO LONGER SAVE.")
-            if (!Queue.playing) await Queue.play();
-            Queue.setPaused(false)
-        }
-    }
-})
+// Client.Player.on("channelEmpty", async(Queue) => {
+//     console.log("TRY PAUSE FOR SAVING.")
+    
+//     Queue.setPaused(true)
+// })
 
 Client.Player.on("botDisconnect", async (Queue) => {
     const newQueue = await Client.Player.createQueue(Client.Default_Guild, {
@@ -254,16 +274,6 @@ Client.Player.on("botDisconnect", async (Queue) => {
 
     if (Queue.tracks.length > 0){
         await newQueue.addTracks(Queue.tracks)
-    }
-
-    
-
-    if (!Queue.playing) await Queue.play();
-    if(Queue.metadata.channel.members.size > 1){ // More than one to include the bot itself.
-        console.log("Start Playing...")
-        Queue.setPaused(false)
-    }else{
-        Queue.setPaused(true)
     }
 
     await newQueue.connect(Client.Default_Channel);

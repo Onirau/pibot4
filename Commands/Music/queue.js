@@ -45,8 +45,13 @@ module.exports = {
         }
 
         const queueString = Queue.tracks.slice(page*10, page*10+10).map((song, i) => {
+            if (!song){
+                return `** BROKEN SONG? ** `
+            }else if(!song.title){
+                song.title = "~BROKEN SONG TITLE~"
+            }
             const originalTitle = song.title
-            var limitedTitle = originalTitle.substring(0, 20)
+            var limitedTitle = originalTitle.substring(0, 30)
             if(!(originalTitle === limitedTitle)) limitedTitle = limitedTitle + "..."
             return `**( ${page*10+i+1} )** \`[${song.duration}]\` ${limitedTitle} - ${song.author}`
         }).join(`\n`);

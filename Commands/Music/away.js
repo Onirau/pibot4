@@ -20,9 +20,8 @@ module.exports = {
         
         await interaction.reply({content:"Cya!", ephemeral:true})
 
-        await Queue.connect(Client.Default_Channel)
-        Queue.metadata.channel = Client.Default_Channel
-
-        Queue.setPaused(true)
+        await Client.guilds.resolve(interaction.guildId).members.resolve(Client.user.id).voice.setChannel(Client.Default_Channel)
+        // await Queue.connect(Client.Default_Channel)
+        // await Client.Fix(interaction)
     }
 }

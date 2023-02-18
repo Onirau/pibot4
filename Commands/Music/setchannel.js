@@ -26,13 +26,7 @@ module.exports = {
         await Queue.skip();
         await Queue.addTracks(Tracks)
 
-        if (!Queue.playing) await Queue.play();
-        if(Queue.metadata.channel.members.size > 1){ // More than one to include the bot itself.
-            console.log("Start Playing...")
-            Queue.setPaused(false)
-        }else{
-            Queue.setPaused(true)
-        }
+        await Client.tryPlay(Queue)
 
         var Channels_Embed = Client.GetEmbed()
         .setDescription(
