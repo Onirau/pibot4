@@ -7,8 +7,9 @@
 const Discord = require("discord.js");
 const fs = require('fs');
 const { Player, QueueRepeatMode } = require("discord-player");
-const { QueryType } = require("discord-player");
+const { Track, QueryType } = require("discord-player");
 const { EmbedBuilder } = require("@discordjs/builders");
+const { getData, parseMS, buildTimeCode } = require("./Extractor/spotify_api");
 require('dotenv').config();
 
 // Classes
@@ -42,6 +43,8 @@ Client.Player = new Player(Client, {
     }
 })
 
+// Client.Player.use("spot_API_EXAC", spot_API_EXAC)
+
 Client.Commands = new Discord.Collection();
 
 Client.Channels = [
@@ -49,7 +52,7 @@ Client.Channels = [
     new RadioChannel("https://open.spotify.com/playlist/4Ay8TrBgI7WOTCQHcSMzk8?si=ea314d1885f1475b", `"Top Tier"`, "toptier", "Angle", QueryType.SPOTIFY_PLAYLIST),
     new RadioChannel("https://open.spotify.com/playlist/0oZq1bRG3laddQEpdLzUFY?si=a5f28f068f204546", `"Collection V2"`, "collection2", "Leuk", QueryType.SPOTIFY_PLAYLIST),
     new RadioChannel("https://open.spotify.com/playlist/0vvXsWCC9xrXsKd4FyS8kM?si=06930acd720444b3", "Study Lofi 📚", "lofi", "Lofi Girl", QueryType.SPOTIFY_PLAYLIST),
-    new RadioChannel("https://open.spotify.com/playlist/2SIsxQoy5cD3Ei29WDPywW?si=e4c71aa3f55d437b", "Old School", "oldschool", "Rile", QueryType.SPOTIFY_PLAYLIST),
+    new RadioChannel("https://open.spotify.com/playlist/1wUa5gyfOgPvsSeddZRQO8?si=125931c0b9be4686", "Old School", "oldschool", "Rile", QueryType.SPOTIFY_PLAYLIST),
     new RadioChannel("https://open.spotify.com/playlist/0gfVGUS0zaX57oXZtu3oxo?si=9ad1504a96d34619", "acloudyskye", "acloudyskye", "Rile", QueryType.SPOTIFY_PLAYLIST)
 ] // Radio Channels
 
@@ -84,7 +87,16 @@ function getCommands(distPath, isRoot){
 }
 
 
+async function playPlaylist(URL) { // Custom Playlist Implementation to play 100+ track playlists
+    var ref = URL.split("/")[4].split("?")[0]
+    var tracks = await getData(ref)
 
+    if (!tracks) {
+        return {}
+    }
+
+    return tracks
+}
 
 function shuffle(array) {
     let currentIndex = array.length,  randomIndex;
@@ -115,13 +127,36 @@ async function GetTracks(radioChannelID){
         }
         reject("Couldn't find radio channel")
     }).then(async (radio_channel) => {
-        var results = await Client.Player.search(radio_channel.url, {
-            searchEngine: radio_channel.query
-        })
-        
-        tracks = results.tracks
+        var results = await playPlaylist(radio_channel.url)
 
-        // console.log(tracks.length)
+        await new Promise(async (resolve, reject) => {
+            var playlist = []
+
+            for (result in results) {
+                array_result = results[result]
+
+                var track_result = new Track(Client.Player, {
+                    id: array_result["track"]["id"],
+                    title: array_result["track"]["name"],
+                    author: (array_result["track"]["artists"].length > 0) ? array_result["track"]["artists"][0]:"Artist Unavailable",
+                    url: array_result["track"]["external_urls"]["spotify"],
+                    thumbnail: 'https://www.scdn.co/i/_global/twitter_card-default.jpg',
+                    duration: buildTimeCode(parseMS(array_result["track"]["duration_ms"])),
+                    views: 0,
+                    requestedBy: null,
+                    playlist: null,
+                    source: "spotify"
+                })
+
+                playlist.push(track_result)
+            }
+
+            resolve(playlist)
+        }).then((playlist) => {
+            console.log("a")
+
+            tracks = playlist
+        })
 
         tracks = shuffle(tracks)         
     }).catch(() => {
@@ -228,6 +263,10 @@ Client.on("ready", async () => {
 
     await Queue.clear();
     await Queue.skip();
+    await console.log(Tracks)
+
+    // process.exit(999)
+
     await Queue.addTracks(Tracks)
 
     await Queue.connect(Client.Default_Channel);

@@ -24,6 +24,8 @@ module.exports = {
 
         await Queue.clear();
         await Queue.skip();
+        // await playPlaylist(Tracks)
+        
         await Queue.addTracks(Tracks)
 
         await Client.tryPlay(Queue)
