@@ -7,9 +7,9 @@
 const Discord = require("discord.js");
 const fs = require('fs');
 const { Player, QueueRepeatMode } = require("discord-player");
-const { Track, QueryType } = require("discord-player");
+const { QueryType } = require("discord-player");
 const { EmbedBuilder } = require("@discordjs/builders");
-const { getData, parseMS, buildTimeCode } = require("./Extractor/spotify_api");
+const { getData } = require("./Extractor/spotify_api");
 require('dotenv').config();
 
 // Classes
@@ -127,36 +127,16 @@ async function GetTracks(radioChannelID){
         }
         reject("Couldn't find radio channel")
     }).then(async (radio_channel) => {
-        var results = await playPlaylist(radio_channel.url)
+        // var results = await playPlaylist(radio_channel.url)
+        
 
-        await new Promise(async (resolve, reject) => {
-            var playlist = []
-
-            for (result in results) {
-                array_result = results[result]
-
-                var track_result = new Track(Client.Player, {
-                    id: array_result["track"]["id"],
-                    title: array_result["track"]["name"],
-                    author: (array_result["track"]["artists"].length > 0) ? array_result["track"]["artists"][0]:"Artist Unavailable",
-                    url: array_result["track"]["external_urls"]["spotify"],
-                    thumbnail: 'https://www.scdn.co/i/_global/twitter_card-default.jpg',
-                    duration: buildTimeCode(parseMS(array_result["track"]["duration_ms"])),
-                    views: 0,
-                    requestedBy: null,
-                    playlist: null,
-                    source: "spotify"
-                })
-
-                playlist.push(track_result)
-            }
-
-            resolve(playlist)
-        }).then((playlist) => {
-            console.log("a")
-
-            tracks = playlist
+        var results = await Client.Player.search(radio_channel.url, {
+            searchEngine: radio_channel.query
         })
+
+        tracks = results.tracks
+
+        // console.log(tracks.length)
 
         tracks = shuffle(tracks)         
     }).catch(() => {
@@ -263,10 +243,6 @@ Client.on("ready", async () => {
 
     await Queue.clear();
     await Queue.skip();
-    await console.log(Tracks)
-
-    // process.exit(999)
-
     await Queue.addTracks(Tracks)
 
     await Queue.connect(Client.Default_Channel);
